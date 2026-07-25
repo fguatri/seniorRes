@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gestión de residentes</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #F4F3EF;
+    color: #26251F;
+    margin: 0;
+    padding: 0;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  h1 { font-size: 20px; font-weight: 600; margin: 0; }
+  .count { font-size: 13px; color: #6B6A62; margin: 2px 0 0; }
+  button {
+    font: inherit;
+    cursor: pointer;
+    border-radius: 8px;
+    border: 1px solid #D8D6CC;
+    background: #fff;
+    padding: 9px 14px;
+    font-size: 14px;
+    color: #26251F;
+  }
+  button:hover { background: #F0EFE9; }
+  .primary { background: #26251F; color: #fff; border-color: #26251F; }
+  .primary:hover { background: #3a392f; }
+  .empty {
+    text-align: center;
+    padding: 40px 16px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #E4E2D8;
+  }
+  .empty p:first-child { font-weight: 600; margin: 0 0 4px; }
+  .empty p:last-child { font-size: 13px; color: #6B6A62; margin: 0; }
+
+  /* Login */
+  #login-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .login-box {
+    background: #fff; border-radius: 12px; padding: 28px 24px; width: 100%; max-width: 360px;
+    border: 1px solid #E4E2D8;
+  }
+  .login-box h1 { text-align: center; margin-bottom: 4px; }
+  .login-box p.sub { text-align: center; font-size: 13px; color: #6B6A62; margin: 0 0 20px; }
+  .login-error {
+    font-size: 13px; color: #A65252; background: #FBEAEA; padding: 8px 10px;
+    border-radius: 8px; margin-bottom: 12px; display: none;
+  }
+
+  /* App layout */
+  #app-screen { display: none; }
+  .app-body { display: flex; gap: 16px; }
+  .sidebar {
+    width: 180px; flex-shrink: 0; background: #fff; border-radius: 12px;
+    padding: 1rem 0.75rem; border: 1px solid #E4E2D8; align-self: flex-start;
+  }
+  .sidebar-title { font-size: 13px; font-weight: 500; color: #A6A499; margin: 0 0 12px; padding: 0 8px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px;
+    font-size: 14px; cursor: pointer; color: #26251F; margin-bottom: 2px;
+  }
+  .nav-item.active { background: #EFEBDB; color: #6B5E1E; font-weight: 500; }
+  .nav-item:hover:not(.active) { background: #F0EFE9; }
+  .main-panel { flex: 1; min-width: 0; }
+
+  #list { display: flex; flex-direction: column; gap: 10px; }
+  .card {
+    background: #fff;
+    border: 1px solid #E4E2D8;
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .card-info { display: flex; gap: 12px; align-items: center; }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #E9E6D8; display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 13px; color: #6B5E1E; flex-shrink: 0;
+  }
+  .name { font-weight: 600; font-size: 15px; margin: 0; }
+  .sub { font-size: 13px; color: #6B6A62; margin: 2px 0 0; }
+  .actions { display: flex; gap: 4px; }
+  .actions button { padding: 6px 8px; }
+  .meds { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .med-pill {
+    font-size: 12px; padding: 4px 10px; border-radius: 6px;
+    background: #EFEBDB; color: #6B5E1E;
+  }
+  .no-meds { font-size: 12px; color: #A6A499; margin: 8px 0 0; }
+
+  #overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); align-items: center; justify-content: center; z-index: 10;
+    padding: 16px;
+  }
+  .modal { background: #fff; border-radius: 12px; padding: 20px; width: 100%; max-width: 420px; }
+  .modal h2 { font-size: 16px; font-weight: 600; margin: 0 0 14px; }
+  label { font-size: 13px; color: #6B6A62; display: block; margin-bottom: 4px; }
+  input, textarea {
+    width: 100%; margin-bottom: 12px; padding: 9px 10px; font: inherit; font-size: 14px;
+    border-radius: 8px; border: 1px solid #D8D6CC; background: #fff;
+  }
+  textarea { resize: vertical; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+  .status { font-size: 13px; color: #A65252; margin-top: 10px; display: none; }
+  .no-access {
+    text-align: center; padding: 40px 16px; background: #fff; border-radius: 12px; border: 1px solid #E4E2D8;
+    color: #6B6A62; font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<!-- PANTALLA DE LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Centro San José</h1>
+    <p class="sub">Ingresá con tu usuario</p>
+    <p class="login-error" id="login-error"></p>
+    <label>Email</label>
+    <input id="login-email" type="email" placeholder="tu@email.com" />
+    <label>Contraseña</label>
+    <input id="login-password" type="password" placeholder="••••••••" />
+    <button class="primary" id="login-btn" style="width:100%; margin-top:6px;">Ingresar</button>
+  </div>
+</div>
+
+<!-- PANTALLA DE LA APP -->
+<div id="app-screen">
+  <div class="wrap">
+    <header>
+      <div>
+        <h1 id="header-title">Residentes</h1>
+        <p class="count" id="count-label"></p>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <span id="user-label" style="font-size:13px; color:#6B6A62;"></span>
+        <button id="logout-btn">Salir</button>
+      </div>
+    </header>
+
+    <div class="app-body">
+      <div class="sidebar">
+        <p class="sidebar-title">Menú</p>
+        <div id="nav"></div>
+      </div>
+
+      <div class="main-panel">
+        <div id="residentes-section">
+          <div style="display:flex; justify-content:flex-end; margin-bottom:12px;">
+            <button class="primary" id="add-btn">+ Agregar residente</button>
+          </div>
+          <div class="empty" id="empty-state" style="display:none;">
+            <p>Todavía no hay residentes cargados</p>
+            <p>Agregá el primero para empezar.</p>
+          </div>
+          <div id="list"></div>
+        </div>
+
+        <div id="no-access-section" style="display:none;">
+          <div class="no-access">Tu usuario no tiene acceso a esta sección.</div>
+        </div>
+      </div>
+    </div>
+    <p class="status" id="status-msg"></p>
+  </div>
+</div>
+
+<div id="overlay">
+  <div class="modal">
+    <h2 id="modal-title">Nuevo residente</h2>
+    <label>Nombre completo</label>
+    <input id="f-name" type="text" placeholder="Ej: Rosa Fernández" />
+    <label>Edad</label>
+    <input id="f-age" type="number" placeholder="Ej: 82" />
+    <label>Obra social</label>
+    <input id="f-insurance" type="text" placeholder="Ej: PAMI" />
+    <label>Medicación (una por línea, con horario)</label>
+    <textarea id="f-meds" rows="3" placeholder="Ej: Losartán 50mg - 8:00"></textarea>
+    <div class="modal-actions">
+      <button id="modal-cancel">Cancelar</button>
+      <button class="primary" id="modal-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --- Conexión a Supabase ---
+  const SUPABASE_URL = "https://qvadtpizmkqvbdhswddk.supabase.co";
+  const SUPABASE_KEY = "sb_publishable__DOKHN1RP6UxfdLnraI2eg_K68l_uOB";
+  const AUTH_API = SUPABASE_URL + "/auth/v1";
+  const REST_API = SUPABASE_URL + "/rest/v1";
+
+  // Secciones y qué rol puede verlas
+  const SECTIONS = [
+    { id: "residentes", label: "Residentes", roles: ["admin", "enfermera", "administrativo"] },
+    { id: "facturacion", label: "Facturación", roles: ["admin", "administrativo"] }
+  ];
+
+  let session = JSON.parse(localStorage.getItem("geriatrico_session") || "null");
+  let perfil = null;
+  let residents = [];
+  let editingId = null;
+  let activeSection = "residentes";
+
+  const loginScreen = document.getElementById("login-screen");
+  const appScreen = document.getElementById("app-screen");
+  const loginError = document.getElementById("login-error");
+
+  function esc(s) {
+    const d = document.createElement("div");
+    d.textContent = s == null ? "" : s;
+    return d.innerHTML;
+  }
+  function initials(name) {
+    const parts = name.trim().split(/\s+/);
+    const i = parts[0] ? parts[0][0] : "";
+    const j = parts.length > 1 ? parts[parts.length - 1][0] : "";
+    return (i + j).toUpperCase();
+  }
+  function authHeaders() {
+    return {
+      "apikey": SUPABASE_KEY,
+      "Authorization": "Bearer " + (session ? session.access_token : SUPABASE_KEY),
+      "Content-Type": "application/json",
+      "Prefer": "return=representation"
+    };
+  }
+
+  // --- LOGIN ---
+  document.getElementById("login-btn").addEventListener("click", async function () {
+    const email = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
+    loginError.style.display = "none";
+    if (!email || !password) return;
+
+    try {
+      const res = await fetch(AUTH_API + "/token?grant_type=password", {
+        method: "POST",
+        headers: { "apikey": SUPABASE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email, password: password })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        loginError.textContent = "Email o contraseña incorrectos.";
+        loginError.style.display = "block";
+        return;
+      }
+      session = { access_token: data.access_token, user: data.user };
+      localStorage.setItem("geriatrico_session", JSON.stringify(session));
+      await afterLogin();
+    } catch (e) {
+      loginError.textContent = "No se pudo conectar. Probá de nuevo.";
+      loginError.style.display = "block";
+    }
+  });
+
+  document.getElementById("logout-btn").addEventListener("click", function () {
+    session = null;
+    perfil = null;
+    localStorage.removeItem("geriatrico_session");
+    appScreen.style.display = "none";
+    loginScreen.style.display = "flex";
+  });
+
+  async function fetchPerfil() {
+    const res = await fetch(REST_API + "/perfiles?select=*&id=eq." + session.user.id, { headers: authHeaders() });
+    const rows = await res.json();
+    return rows[0] || null;
+  }
+
+  async function afterLogin() {
+    perfil = await fetchPerfil();
+    if (!perfil) {
+      loginError.textContent = "No se encontró tu perfil. Avisá al administrador.";
+      loginError.style.display = "block";
+      return;
+    }
+    loginScreen.style.display = "none";
+    appScreen.style.display = "block";
+    document.getElementById("user-label").textContent = session.user.email + " · " + perfil.rol;
+    renderNav();
+    goTo("residentes");
+  }
+
+  // --- NAV ---
+  function renderNav() {
+    const navEl = document.getElementById("nav");
+    navEl.innerHTML = "";
+    SECTIONS.forEach(function (s) {
+      const allowed = s.roles.indexOf(perfil.rol) !== -1;
+      if (!allowed) return; // ocultamos directamente lo que no le corresponde
+      const item = document.createElement("div");
+      item.className = "nav-item" + (s.id === activeSection ? " active" : "");
+      item.textContent = s.label;
+      item.addEventListener("click", function () { goTo(s.id); });
+      navEl.appendChild(item);
+    });
+  }
+
+  function goTo(sectionId) {
+    activeSection = sectionId;
+    renderNav();
+    const section = SECTIONS.find(function (s) { return s.id === sectionId; });
+    const hasAccess = section && section.roles.indexOf(perfil.rol) !== -1;
+    document.getElementById("residentes-section").style.display = (hasAccess && sectionId === "residentes") ? "block" : "none";
+    document.getElementById("no-access-section").style.display = (!hasAccess) ? "block" : "none";
+    document.getElementById("header-title").textContent = section ? section.label : "";
+    if (hasAccess && sectionId === "residentes") load();
+  }
+
+  // --- RESIDENTES (misma lógica de antes, ahora con sesión) ---
+  const listEl = document.getElementById("list");
+  const emptyEl = document.getElementById("empty-state");
+  const countEl = document.getElementById("count-label");
+  const overlay = document.getElementById("overlay");
+  const statusEl = document.getElementById("status-msg");
+
+  function showError(msg) { statusEl.textContent = msg; statusEl.style.display = "block"; }
+
+  async function load() {
+    try {
+      const res = await fetch(REST_API + "/residentes?select=*&order=creado_en.desc", { headers: authHeaders() });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      residents = await res.json();
+      statusEl.style.display = "none";
+    } catch (e) {
+      showError("No se pudo conectar con la base de datos.");
+      residents = [];
+    }
+    render();
+  }
+
+  function render() {
+    listEl.innerHTML = "";
+    countEl.textContent = residents.length === 0 ? "Sin residentes cargados" :
+      residents.length + (residents.length === 1 ? " residente" : " residentes");
+    emptyEl.style.display = residents.length === 0 ? "block" : "none";
+
+    residents.forEach(function (r) {
+      const card = document.createElement("div");
+      card.className = "card";
+      const meds = (r.medicacion || "").split("\n").filter(Boolean);
+      const medsHtml = meds.length
+        ? '<div class="meds">' + meds.map(function (m) { return '<span class="med-pill">' + esc(m) + "</span>"; }).join("") + "</div>"
+        : '<p class="no-meds">Sin medicación cargada</p>';
+
+      card.innerHTML =
+        '<div class="card-top">' +
+          '<div class="card-info">' +
+            '<div class="avatar">' + esc(initials(r.nombre)) + "</div>" +
+            "<div>" +
+              '<p class="name">' + esc(r.nombre) + "</p>" +
+              '<p class="sub">' + (r.edad ? r.edad + " años" : "Edad sin especificar") + (r.obra_social ? " · " + esc(r.obra_social) : "") + "</p>" +
+            "</div>" +
+          "</div>" +
+          '<div class="actions">' +
+            '<button class="edit-btn" data-id="' + r.id + '">Editar</button>' +
+            '<button class="del-btn" data-id="' + r.id + '">Eliminar</button>' +
+          "</div>" +
+        "</div>" + medsHtml;
+      listEl.appendChild(card);
+    });
+
+    listEl.querySelectorAll(".edit-btn").forEach(function (b) {
+      b.addEventListener("click", function () { openModal(this.dataset.id); });
+    });
+    listEl.querySelectorAll(".del-btn").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        const id = this.dataset.id;
+        try {
+          await fetch(REST_API + "/residentes?id=eq." + id, { method: "DELETE", headers: authHeaders() });
+          residents = residents.filter(function (r) { return r.id !== id; });
+          render();
+        } catch (e) { showError("No se pudo eliminar."); }
+      });
+    });
+  }
+
+  function openModal(id) {
+    editingId = id || null;
+    document.getElementById("modal-title").textContent = id ? "Editar residente" : "Nuevo residente";
+    const r = id ? residents.find(function (x) { return x.id === id; }) : null;
+    document.getElementById("f-name").value = r ? r.nombre : "";
+    document.getElementById("f-age").value = r ? (r.edad || "") : "";
+    document.getElementById("f-insurance").value = r ? (r.obra_social || "") : "";
+    document.getElementById("f-meds").value = r ? (r.medicacion || "") : "";
+    overlay.style.display = "flex";
+  }
+  function closeModal() { overlay.style.display = "none"; }
+
+  document.getElementById("add-btn").addEventListener("click", function () { openModal(null); });
+  document.getElementById("modal-cancel").addEventListener("click", closeModal);
+  overlay.addEventListener("click", function (e) { if (e.target === overlay) closeModal(); });
+
+  document.getElementById("modal-save").addEventListener("click", async function () {
+    const name = document.getElementById("f-name").value.trim();
+    if (!name) { document.getElementById("f-name").focus(); return; }
+    const data = {
+      nombre: name,
+      edad: document.getElementById("f-age").value.trim() || null,
+      obra_social: document.getElementById("f-insurance").value.trim() || null,
+      medicacion: document.getElementById("f-meds").value.trim() || null
+    };
+    try {
+      if (editingId) {
+        await fetch(REST_API + "/residentes?id=eq." + editingId, { method: "PATCH", headers: authHeaders(), body: JSON.stringify(data) });
+      } else {
+        await fetch(REST_API + "/residentes", { method: "POST", headers: authHeaders(), body: JSON.stringify(data) });
+      }
+      closeModal();
+      await load();
+    } catch (e) { showError("No se pudo guardar."); }
+  });
+
+  // --- Al cargar la página, ver si ya había sesión guardada ---
+  (async function init() {
+    if (session && session.access_token) {
+      await afterLogin();
+    }
+  })();
+</script>
+</body>
+</html>
